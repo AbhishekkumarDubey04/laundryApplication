@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: laundry_postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: laundrypass
+      POSTGRES_DB: laundary_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: laundry_backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - NODE_ENV=development
+      - JWT_SECRET=super_secret_jwt_key_laundry_india_2026
+      - DB_USER=postgres
+      - DB_PASSWORD=laundrypass
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=laundary_db
+      - RAZORPAY_KEY_ID=rzp_test_mockKeyId12345
+      - RAZORPAY_KEY_SECRET=mockSecretKeyLaundryApp2026
+    depends_on:
+      - db
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: laundry_frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:5000/api
+      - VITE_RAZORPAY_KEY_ID=rzp_test_mockKeyId12345
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:

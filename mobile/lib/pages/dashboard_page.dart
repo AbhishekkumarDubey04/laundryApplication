@@ -1,0 +1,615 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import '../services/api_service.dart';
+import '../store/auth_provider.dart';
+import '../models/models.dart';
+
+class DashboardPage extends StatefulWidget {
+  const DashboardPage({super.key});
+
+  @override
+  State<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends State<DashboardPage> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  List<Order> _orders = [];
+  List<Address> _addresses = [];
+  List<NotificationModel> _notifications = [];
+  bool _isLoadingOrders = true;
+  bool _isLoadingAddresses = true;
+  int _unreadNotifications = 0;
+
+  final _profileFormKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  bool _isSavingProfile = false;
+
+  final _addressFormKey = GlobalKey<FormState>();
+  final _addressLine1Controller = TextEditingController();
+  final _addressLine2Controller = TextEditingController();
+  final _cityController = TextEditingController();
+  final _stateController = TextEditingController();
+  final _pincodeController = TextEditingController();
+  String _addressTag = 'Home';
+  bool _addressIsDefault = false;
+  Address? _editingAddress;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    _nameController.text = auth.user?.name ?? '';
+    _emailController.text = auth.user?.email ?? '';
+
+    _loadData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _nameController.dispose();
+    _emailController.dispose();
+    _addressLine1Controller.dispose();
+    _addressLine2Controller.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
+    _pincodeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadData() async {
+    _fetchOrders();
+    _fetchAddresses();
+    _fetchNotifications();
+  }
+
+  Future<void> _fetchOrders() async {
+    setState(() => _isLoadingOrders = true);
+    try {
+      final res = await ApiService().getOrders();
+      final list = res.data as List;
+      setState(() {
+        _orders = list.map((o) => Order.fromJson(o as Map<String, dynamic>)).toList();
+      });
+    } catch (_) {} finally {
+      setState(() => _isLoadingOrders = false);
+    }
+  }
+
+  Future<void> _fetchAddresses() async {
+    setState(() => _isLoadingAddresses = true);
+    try {
+      final res = await ApiService().getAddresses();
+      final list = res.data as List;
+      setState(() {
+        _addresses = list.map((a) => Address.fromJson(a as Map<String, dynamic>)).toList();
+      });
+    } catch (_) {} finally {
+      setState(() => _isLoadingAddresses = false);
+    }
+  }
+
+  Future<void> _fetchNotifications() async {
+    try {
+      final res = await ApiService().getNotifications();
+      final list = res.data as List;
+      final notificationsList = list.map((n) => NotificationModel.fromJson(n as Map<String, dynamic>)).toList();
+      setState(() {
+        _notifications = notificationsList;
+        _unreadNotifications = notificationsList.where((n) => n.status == 'unread').length;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _handleSaveProfile() async {
+    if (!_profileFormKey.currentState!.validate()) return;
+    setState(() => _isSavingProfile = true);
+    try {
+      final name = _nameController.text.trim();
+      final email = _emailController.text.trim();
+      
+      await ApiService().updateProfile(name, email.isEmpty ? null : email);
+      
+      // Update local provider
+      await Provider.of<AuthProvider>(context, listen: false).updateProfileLocal(name, email.isEmpty ? null : email);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile settings updated successfully')),
+      );
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update profile settings')),
+      );
+    } finally {
+      setState(() => _isSavingProfile = false);
+    }
+  }
+
+  Future<void> _handleSaveAddress() async {
+    if (!_addressFormKey.currentState!.validate()) return;
+    
+    final payload = {
+      'tag': _addressTag,
+      'address_line_1': _addressLine1Controller.text.trim(),
+      'address_line_2': _addressLine2Controller.text.trim().isEmpty ? null : _addressLine2Controller.text.trim(),
+      'city': _cityController.text.trim(),
+      'state': _stateController.text.trim(),
+      'pincode': _pincodeController.text.trim(),
+      'is_default': _addressIsDefault,
+    };
+
+    try {
+      if (_editingAddress == null) {
+        await ApiService().addAddress(payload);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Address added successfully')));
+      } else {
+        await ApiService().updateAddress(_editingAddress!.id, payload);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Address updated successfully')));
+      }
+      Navigator.pop(context);
+      _fetchAddresses();
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to save address details')));
+    }
+  }
+
+  Future<void> _handleDeleteAddress(int id) async {
+    try {
+      await ApiService().deleteAddress(id);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Address deleted successfully')));
+      _fetchAddresses();
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to delete address')));
+    }
+  }
+
+  Future<void> _markAllNotificationsRead() async {
+    try {
+      await ApiService().markNotificationsRead();
+      _fetchNotifications();
+    } catch (_) {}
+  }
+
+  void _showAddressDialog([Address? addr]) {
+    _editingAddress = addr;
+    if (addr == null) {
+      _addressLine1Controller.clear();
+      _addressLine2Controller.clear();
+      _cityController.clear();
+      _stateController.clear();
+      _pincodeController.clear();
+      _addressTag = 'Home';
+      _addressIsDefault = false;
+    } else {
+      _addressLine1Controller.text = addr.addressLine1;
+      _addressLine2Controller.text = addr.addressLine2 ?? '';
+      _cityController.text = addr.city;
+      _stateController.text = addr.state;
+      _pincodeController.text = addr.pincode;
+      _addressTag = addr.tag;
+      _addressIsDefault = addr.isDefault;
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(addr == null ? 'Create New Address' : 'Update Address', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Form(
+              key: _addressFormKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    value: _addressTag,
+                    decoration: const InputDecoration(labelText: 'Tag'),
+                    items: ['Home', 'Work', 'Other']
+                        .map((tag) => DropdownMenuItem(value: tag, child: Text(tag)))
+                        .toList(),
+                    onChanged: (val) => setDialogState(() => _addressTag = val!),
+                  ),
+                  TextFormField(
+                    controller: _addressLine1Controller,
+                    decoration: const InputDecoration(labelText: 'Address Line 1'),
+                    validator: (v) => v!.isEmpty ? 'Required' : null,
+                  ),
+                  TextFormField(
+                    controller: _addressLine2Controller,
+                    decoration: const InputDecoration(labelText: 'Address Line 2 (Optional)'),
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _cityController,
+                          decoration: const InputDecoration(labelText: 'City'),
+                          validator: (v) => v!.isEmpty ? 'Required' : null,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _stateController,
+                          decoration: const InputDecoration(labelText: 'State'),
+                          validator: (v) => v!.isEmpty ? 'Required' : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                  TextFormField(
+                    controller: _pincodeController,
+                    decoration: const InputDecoration(labelText: 'Pincode'),
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    validator: (v) => v!.length != 6 ? 'Pincode must be 6 digits' : null,
+                  ),
+                  CheckboxListTile(
+                    title: const Text('Set as default address', style: TextStyle(fontSize: 12)),
+                    value: _addressIsDefault,
+                    onChanged: (val) => setDialogState(() => _addressIsDefault = val!),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: _handleSaveAddress,
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF021024), foregroundColor: Colors.white),
+              child: const Text('Save'),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showNotificationsDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Notifications', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            if (_unreadNotifications > 0)
+              TextButton(
+                onPressed: () {
+                  _markAllNotificationsRead();
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Mark all read', style: TextStyle(fontSize: 12)),
+              )
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 300,
+          child: _notifications.isEmpty
+              ? const Center(child: Text('No alerts found', style: TextStyle(color: Colors.grey)))
+              : ListView.separated(
+                  itemCount: _notifications.length,
+                  separatorBuilder: (_, __) => const Divider(),
+                  itemBuilder: (context, idx) {
+                    final n = _notifications[idx];
+                    return ListTile(
+                      title: Text(n.title, style: TextStyle(fontSize: 12, fontWeight: n.status == 'unread' ? FontWeight.bold : FontWeight.normal)),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          Text(n.message, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                          const SizedBox(height: 2),
+                          Text(n.createdAt.replaceFirst('T', ' ').substring(0, 16), style: const TextStyle(fontSize: 9, color: Colors.grey)),
+                        ],
+                      ),
+                      contentPadding: EdgeInsets.zero,
+                    );
+                  },
+                ),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = Provider.of<AuthProvider>(context);
+    final isDark = auth.isDarkMode;
+    final user = auth.user;
+    final theme = Theme.of(context);
+
+    final activeOrdersCount = _orders.where((o) => o.status != 'delivered').length;
+    final completedOrdersCount = _orders.where((o) => o.status == 'delivered').length;
+    final totalPaidSpend = _orders
+        .where((o) => o.paymentStatus == 'paid')
+        .fold(0.0, (sum, o) => sum + o.grandTotal);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('LaundryIndia', style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+            onPressed: () => auth.toggleTheme(),
+          ),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(LucideIcons.bell),
+                onPressed: _showNotificationsDialog,
+              ),
+              if (_unreadNotifications > 0)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                    child: Text('$_unreadNotifications', style: const TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                )
+            ],
+          ),
+          IconButton(
+            icon: const Icon(LucideIcons.logOut, color: Colors.red),
+            onPressed: () async {
+              await auth.logout();
+              Navigator.pushReplacementNamed(context, '/');
+            },
+          )
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => Navigator.pushNamed(context, '/book'),
+        backgroundColor: const Color(0xFF021024),
+        foregroundColor: Colors.white,
+        icon: const Icon(LucideIcons.plus, size: 18),
+        label: const Text('Book Order', style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            // User card
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 26,
+                      backgroundColor: const Color(0xFF7DA0CA).withOpacity(0.3),
+                      child: Text(user?.name[0] ?? 'U', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(user?.name ?? '', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                          Text(user?.phone ?? '', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(color: Colors.blue.withOpacity(0.15), borderRadius: BorderRadius.circular(4)),
+                            child: Text(user?.role.toUpperCase() ?? '', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.blue)),
+                          )
+                        ],
+                      ),
+                    )
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // KPI Dashboard Metrics
+            Row(
+              children: [
+                _buildKpiCard('Active', '$activeOrdersCount', LucideIcons.activity, Colors.blue),
+                const SizedBox(width: 12),
+                _buildKpiCard('Delivered', '$completedOrdersCount', LucideIcons.checkCircle, Colors.green),
+                const SizedBox(width: 12),
+                _buildKpiCard('Spend', '₹${totalPaidSpend.toStringAsFixed(0)}', LucideIcons.indianRupee, Colors.orange),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Tab Panels
+            TabBar(
+              controller: _tabController,
+              labelColor: isDark ? const Color(0xFF7DA0CA) : const Color(0xFF021024),
+              unselectedLabelColor: Colors.grey,
+              indicatorColor: isDark ? const Color(0xFF7DA0CA) : const Color(0xFF021024),
+              tabs: const [
+                Tab(text: 'Orders'),
+                Tab(text: 'Addresses'),
+                Tab(text: 'Profile'),
+              ],
+            ),
+            SizedBox(
+              height: 400,
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildOrdersTab(theme),
+                  _buildAddressesTab(theme),
+                  _buildProfileTab(theme),
+                ],
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildKpiCard(String label, String value, IconData icon, Color color) {
+    return Expanded(
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                  Icon(icon, size: 14, color: color),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrdersTab(ThemeData theme) {
+    if (_isLoadingOrders) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_orders.isEmpty) {
+      return const Center(child: Text('No orders found', style: TextStyle(color: Colors.grey)));
+    }
+    return ListView.builder(
+      itemCount: _orders.length,
+      padding: const EdgeInsets.only(top: 12),
+      itemBuilder: (context, idx) {
+        final o = _orders[idx];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: ListTile(
+            title: Text('Order #${o.id}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            subtitle: Text('Pickup: ${o.pickupDate}\nMode: ${o.deliveryPreference.toUpperCase()}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+            trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text('₹${o.grandTotal}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 4),
+                Text(o.status.toUpperCase().replaceAll('_', ' '), style: TextStyle(fontSize: 9, color: o.status == 'delivered' ? Colors.green : Colors.orange, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            onTap: () => Navigator.pushNamed(context, '/track/${o.id}'),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAddressesTab(ThemeData theme) {
+    if (_isLoadingAddresses) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return Column(
+      children: [
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Saved Addresses', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            ElevatedButton.icon(
+              onPressed: () => _showAddressDialog(),
+              icon: const Icon(LucideIcons.plus, size: 14),
+              label: const Text('Add Address', style: TextStyle(fontSize: 11)),
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF021024), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0)),
+            )
+          ],
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: _addresses.isEmpty
+              ? const Center(child: Text('No addresses saved. Add one to start bookings.', style: TextStyle(color: Colors.grey)))
+              : ListView.builder(
+                  itemCount: _addresses.length,
+                  itemBuilder: (context, idx) {
+                    final a = _addresses[idx];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(LucideIcons.mapPin, color: Colors.blue, size: 18),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(a.tag, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                      if (a.isDefault) ...[
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                          decoration: BoxDecoration(color: Colors.green.withOpacity(0.15), borderRadius: BorderRadius.circular(4)),
+                                          child: const Text('DEFAULT', style: TextStyle(fontSize: 8, color: Colors.green, fontWeight: FontWeight.bold)),
+                                        )
+                                      ]
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(a.addressLine1, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                  if (a.addressLine2 != null) Text(a.addressLine2!, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                  Text('${a.city}, ${a.state} - ${a.pincode}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                ],
+                              ),
+                            ),
+                            IconButton(icon: const Icon(LucideIcons.edit2, size: 16), onPressed: () => _showAddressDialog(a)),
+                            IconButton(icon: const Icon(LucideIcons.trash2, size: 16, color: Colors.red), onPressed: () => _handleDeleteAddress(a.id)),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        )
+      ],
+    );
+  }
+
+  Widget _buildProfileTab(ThemeData theme) {
+    return Form(
+      key: _profileFormKey,
+      child: ListView(
+        padding: const EdgeInsets.only(top: 12),
+        children: [
+          TextFormField(
+            controller: _nameController,
+            decoration: const InputDecoration(labelText: 'Contact Name'),
+            validator: (v) => v!.trim().isEmpty ? 'Name is required' : null,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _emailController,
+            decoration: const InputDecoration(labelText: 'Email Address'),
+            keyboardType: TextInputType.emailAddress,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: _isSavingProfile ? null : _handleSaveProfile,
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF021024), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14)),
+            child: _isSavingProfile ? const CircularProgressIndicator(color: Colors.white) : const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold)),
+          )
+        ],
+      ),
+    );
+  }
+}

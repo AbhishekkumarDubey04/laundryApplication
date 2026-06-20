@@ -1,0 +1,194 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Laundry Service Platform (India) API",
+    "version": "1.0.0",
+    "description": "REST API documentation for PWA & Future Flutter App integrations."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000/api",
+      "description": "Local development server"
+    }
+  ],
+  "paths": {
+    "/auth/send-otp": {
+      "post": {
+        "summary": "Request a mock OTP to phone",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "phone": { "type": "string", "example": "+919999999999" }
+                },
+                "required": ["phone"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "OTP generated and returned for test sandbox" }
+        }
+      }
+    },
+    "/auth/verify-otp": {
+      "post": {
+        "summary": "Verify phone OTP and generate JWT",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "phone": { "type": "string", "example": "+919999999999" },
+                  "otp": { "type": "string", "example": "123456" }
+                },
+                "required": ["phone", "otp"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "JWT issued successfully along with user profiles details" }
+        }
+      }
+    },
+    "/services": {
+      "get": {
+        "summary": "Retrieve services grouped with clothing rates",
+        "responses": {
+          "200": { "description": "Array of services including rates structures" }
+        }
+      }
+    },
+    "/orders": {
+      "get": {
+        "summary": "Retrieve orders history",
+        "responses": {
+          "200": { "description": "List of user orders (or all orders if admin)" }
+        }
+      },
+      "post": {
+        "summary": "Submit a new booking placement",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pickup_address_id": { "type": "integer" },
+                  "pickup_date": { "type": "string", "format": "date" },
+                  "pickup_time_slot": { "type": "string" },
+                  "delivery_preference": { "type": "string" },
+                  "coupon_code": { "type": "string" },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "item_id": { "type": "integer" },
+                        "service_id": { "type": "integer" },
+                        "quantity": { "type": "integer" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Order successfully booked" }
+        }
+      }
+    },
+    "/orders/{id}/status": {
+      "put": {
+        "summary": "Update order status (Admin only)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": { "type": "string", "example": "processing" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Order status updated" }
+        }
+      }
+    },
+    "/payments/create": {
+      "post": {
+        "summary": "Initiate payment reference",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "order_id": { "type": "integer" },
+                  "method": { "type": "string", "example": "razorpay" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Gateway checkout configurations returned" }
+        }
+      }
+    },
+    "/payments/verify": {
+      "post": {
+        "summary": "Verify payment transaction signature",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "order_id": { "type": "integer" },
+                  "razorpay_payment_id": { "type": "string" },
+                  "razorpay_order_id": { "type": "string" },
+                  "razorpay_signature": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Signature validated and order status set to paid" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}
