@@ -71,9 +71,11 @@ class _TrackingPageState extends State<TrackingPage> {
   Future<void> _handleUpdateStatus(String status) async {
     try {
       await ApiService().updateOrderStatus(widget.orderId, status);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lifecycle status updated')));
       _fetchDetails();
     } catch (_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to update status')));
     }
   }
@@ -81,9 +83,11 @@ class _TrackingPageState extends State<TrackingPage> {
   Future<void> _handleUpdatePayment(String paymentStatus) async {
     try {
       await ApiService().updateOrderPaymentStatus(widget.orderId, paymentStatus);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment status updated')));
       _fetchDetails();
     } catch (_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to update payment status')));
     }
   }
@@ -155,8 +159,8 @@ class _TrackingPageState extends State<TrackingPage> {
                         const Text('Order Tracker', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(color: Colors.blue.withOpacity(0.15), borderRadius: BorderRadius.circular(4)),
-                          child: Text(_order!.status.toUpperCase().replaceAll('_', ' '), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.blue)),
+                          decoration: BoxDecoration(color: theme.colorScheme.primary.withOpacity(0.15), borderRadius: BorderRadius.circular(4)),
+                          child: Text(_order!.status.toUpperCase().replaceAll('_', ' '), style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
                         )
                       ],
                     ),
@@ -220,10 +224,10 @@ class _TrackingPageState extends State<TrackingPage> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: _order!.paymentStatus == 'paid' ? Colors.green.withOpacity(0.15) : Colors.orange.withOpacity(0.15),
+                            color: _order!.paymentStatus == 'paid' ? Colors.green.withOpacity(0.15) : theme.colorScheme.primary.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Text(_order!.paymentStatus.toUpperCase(), style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: _order!.paymentStatus == 'paid' ? Colors.green : Colors.orange)),
+                          child: Text(_order!.paymentStatus.toUpperCase(), style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: _order!.paymentStatus == 'paid' ? Colors.green : theme.colorScheme.primary)),
                         ),
                       ],
                     ),
@@ -241,7 +245,7 @@ class _TrackingPageState extends State<TrackingPage> {
   Widget _buildTimelineStep(String label, String desc, bool isDone, bool isActive, bool isLast, ThemeData theme) {
     Color indicatorColor = Colors.grey.shade300;
     if (isDone) indicatorColor = Colors.green;
-    if (isActive) indicatorColor = const Color(0xFF021024);
+    if (isActive) indicatorColor = theme.colorScheme.primary;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -271,7 +275,7 @@ class _TrackingPageState extends State<TrackingPage> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-                  color: isActive ? const Color(0xFF021024) : (isDone ? Colors.green : Colors.grey),
+                  color: isActive ? theme.colorScheme.primary : (isDone ? Colors.green : Colors.grey),
                 ),
               ),
               const SizedBox(height: 2),
@@ -299,8 +303,8 @@ class _TrackingPageState extends State<TrackingPage> {
 
   Widget _buildAdminControlsCard(ThemeData theme) {
     return Card(
-      color: Colors.yellow.withOpacity(0.08),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: Colors.orangeAccent, width: 1)),
+      color: theme.colorScheme.primary.withOpacity(0.08),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: theme.colorScheme.primary, width: 1)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

@@ -8,7 +8,8 @@ import '../models/models.dart';
 import 'package:intl/intl.dart';
 
 class BookingFlowPage extends StatefulWidget {
-  const BookingFlowPage({super.key});
+  final VoidCallback? onClose;
+  const BookingFlowPage({super.key, this.onClose});
 
   @override
   State<BookingFlowPage> createState() => _BookingFlowPageState();
@@ -98,10 +99,12 @@ class _BookingFlowPageState extends State<BookingFlowPage> {
       final res = await ApiService().validateCoupon(code, cart.getSubtotal());
       final coupon = Coupon.fromJson(res.data as Map<String, dynamic>);
       cart.setCoupon(coupon);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Coupon $code applied! Saved ₹${coupon.discountAmount.toStringAsFixed(0)}')),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid coupon code')));
       cart.setCoupon(null);
     } finally {
@@ -125,17 +128,20 @@ class _BookingFlowPageState extends State<BookingFlowPage> {
       final res = await ApiService().addAddress(payload);
       final newAddr = Address.fromJson(res.data as Map<String, dynamic>);
       
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Address added successfully')));
       Navigator.pop(context);
       
       await _fetchAddresses();
       cart.setAddress(newAddr.id);
     } catch (_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to add address')));
     }
   }
 
   void _showAddAddressDialog(CartProvider cart) {
+    final theme = Theme.of(context);
     _addressLine1Controller.clear();
     _addressLine2Controller.clear();
     _cityController.clear();
@@ -205,7 +211,7 @@ class _BookingFlowPageState extends State<BookingFlowPage> {
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
             ElevatedButton(
               onPressed: () => _addNewAddress(cart),
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF021024), foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: theme.colorScheme.primary, foregroundColor: Colors.white),
               child: const Text('Save Address'),
             )
           ],
@@ -237,6 +243,7 @@ class _BookingFlowPageState extends State<BookingFlowPage> {
       // 2. Process payments method
       final payRes = await ApiService().createPayment(order.id, method);
 
+      if (!mounted) return;
       if (method == 'cod') {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Laundry booked successfully! COD selected.')));
         cart.clearCart();
@@ -275,11 +282,13 @@ class _BookingFlowPageState extends State<BookingFlowPage> {
                     'razorpay_order_id': paymentConfig['id'],
                     'razorpay_payment_id': 'pay_mock_${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}',
                   });
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment approved successfully!')));
+                  if (!ctx.mounted) return;
+                  ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Payment approved successfully!')));
                   cart.clearCart();
-                  Navigator.pushNamedAndRemoveUntil(context, '/track/${order.id}', ModalRoute.withName('/dashboard'));
+                  Navigator.pushNamedAndRemoveUntil(ctx, '/track/${order.id}', ModalRoute.withName('/dashboard'));
                 } catch (_) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transaction verification failed.')));
+                  if (!ctx.mounted) return;
+                  ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Transaction verification failed.')));
                 }
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
@@ -289,6 +298,7 @@ class _BookingFlowPageState extends State<BookingFlowPage> {
         ),
       );
     } catch (_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to place order.')));
     }
   }
@@ -324,7 +334,11 @@ class _BookingFlowPageState extends State<BookingFlowPage> {
             if (_currentStep > 0) {
               setState(() => _currentStep -= 1);
             } else {
-              Navigator.pop(context);
+              if (widget.onClose != null) {
+                widget.onClose!();
+              } else {
+                Navigator.pop(context);
+              }
             }
           },
         ),
@@ -363,19 +377,20 @@ class _BookingFlowPageState extends State<BookingFlowPage> {
   Widget _buildStepHeader(String title, int stepIdx) {
     final active = _currentStep == stepIdx;
     final done = _currentStep > stepIdx;
+    final theme = Theme.of(context);
     return Column(
       children: [
         CircleAvatar(
           radius: 12,
           backgroundColor: active 
-              ? const Color(0xFF021024) 
+              ? theme.colorScheme.primary 
               : (done ? Colors.green : Colors.grey.shade300),
           child: done
               ? const Icon(Icons.check, size: 12, color: Colors.white)
               : Text('${stepIdx + 1}', style: TextStyle(fontSize: 10, color: active ? Colors.white : Colors.black87, fontWeight: FontWeight.bold)),
         ),
         const SizedBox(height: 4),
-        Text(title, style: TextStyle(fontSize: 10, fontWeight: active ? FontWeight.bold : FontWeight.normal, color: active ? const Color(0xFF021024) : Colors.grey)),
+        Text(title, style: TextStyle(fontSize: 10, fontWeight: active ? FontWeight.bold : FontWeight.normal, color: active ? theme.colorScheme.primary : Colors.grey)),
       ],
     );
   }
@@ -471,7 +486,7 @@ class _BookingFlowPageState extends State<BookingFlowPage> {
         if (cart.items.isNotEmpty) ...[
           const SizedBox(height: 12),
           Card(
-            color: const Color(0xFF7DA0CA).withOpacity(0.15),
+            color: theme.colorScheme.primary.withOpacity(0.15),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Row(
@@ -486,7 +501,7 @@ class _BookingFlowPageState extends State<BookingFlowPage> {
                   ),
                   ElevatedButton(
                     onPressed: () => _handleNext(cart),
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF021024), foregroundColor: Colors.white),
+                    style: ElevatedButton.styleFrom(backgroundColor: theme.colorScheme.primary, foregroundColor: Colors.white),
                     child: const Row(
                       children: [
                         Text('Address '),
@@ -575,7 +590,7 @@ class _BookingFlowPageState extends State<BookingFlowPage> {
             ),
             ElevatedButton(
               onPressed: cart.pickupAddressId == null ? null : () => _handleNext(cart),
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF021024), foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: theme.colorScheme.primary, foregroundColor: Colors.white),
               child: const Text('Schedule Slots'),
             ),
           ],
@@ -612,9 +627,9 @@ class _BookingFlowPageState extends State<BookingFlowPage> {
                   width: 90,
                   margin: const EdgeInsets.only(right: 10),
                   decoration: BoxDecoration(
-                    color: selected ? const Color(0xFF7DA0CA).withOpacity(0.2) : theme.cardColor,
+                    color: selected ? theme.colorScheme.primary.withOpacity(0.15) : theme.cardColor,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: selected ? Colors.blue : Colors.grey.shade300),
+                    border: Border.all(color: selected ? Colors.orange : Colors.grey.shade300),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -687,7 +702,7 @@ class _BookingFlowPageState extends State<BookingFlowPage> {
               onPressed: (cart.pickupDate == null || cart.pickupTimeSlot == null)
                   ? null
                   : () => _handleNext(cart),
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF021024), foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: theme.colorScheme.primary, foregroundColor: Colors.white),
               child: const Text('Review Invoice'),
             ),
           ],
@@ -836,17 +851,20 @@ class _BookingFlowPageState extends State<BookingFlowPage> {
           height: 44,
           child: ElevatedButton(
             onPressed: () => _handleCheckout(cart, 'razorpay'),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF021024), foregroundColor: Colors.white),
-            child: const Text('Pay Online (UPI / Card)', style: TextStyle(fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(backgroundColor: theme.colorScheme.primary, foregroundColor: Colors.white),
+            child: const Text('Pay Securely Online'),
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         SizedBox(
           width: double.infinity,
-          height: 44,
           child: OutlinedButton(
             onPressed: () => _handleCheckout(cart, 'cod'),
-            child: const Text('Cash on Delivery (COD)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF021024))),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: theme.colorScheme.primary),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+            child: Text('Cash on Delivery (COD)', style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
           ),
         ),
         const SizedBox(height: 20),

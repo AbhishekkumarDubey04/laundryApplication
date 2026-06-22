@@ -45,7 +45,7 @@ function App() {
         theme={{
           algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
           token: {
-            colorPrimary: isDarkMode ? '#7DA0CA' : '#021024',
+            colorPrimary: '#FF6B00',
             colorSuccess: '#00C853',
             colorWarning: '#FFC107',
             fontFamily: 'Outfit, Inter, sans-serif',

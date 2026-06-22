@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, Button, Table, Modal, Form, Input, Select, Tag, Tabs, Badge, message, Popconfirm, List, Space } from 'antd';
+import { Card, Button, Table, Modal, Form, Input, Select, Tag, Badge, message, Popconfirm, List, Space } from 'antd';
 import {
   User,
   MapPin,
@@ -16,12 +16,15 @@ import {
   Eye,
   Settings,
   Sparkles,
-  Activity
+  Activity,
+  Home,
+  ClipboardList,
+  Sun,
+  Moon
 } from 'lucide-react';
 import api from '../services/api.ts';
 import useAuthStore from '../store/useAuthStore.ts';
-
-const { TabPane } = Tabs;
+import BookingFlow from './BookingFlow.tsx';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -32,6 +35,7 @@ export default function DashboardPage() {
   const [editingAddress, setEditingAddress] = useState<any>(null);
   const [addressForm] = Form.useForm();
   const [profileForm] = Form.useForm();
+  const [activeTab, setActiveTab] = useState<'home' | 'book' | 'orders' | 'profile'>('home');
 
   // Queries
   const { data: orders = [], isLoading: ordersLoading } = useQuery({
@@ -150,288 +154,352 @@ export default function DashboardPage() {
   const unreadNotificationsCount = notifications.filter((n: any) => n.status === 'unread').length;
 
   return (
-    <div className="min-h-screen pb-16" style={{ backgroundColor: 'var(--bg-primary)' }}>
+    <div className="min-h-screen pb-24" style={{ backgroundColor: 'var(--bg-primary)' }}>
       {/* Header Bar */}
       <div className="glass-panel sticky top-0 z-40 rounded-none border-b border-slate-200 bg-white" style={{ borderBottom: '1px solid var(--border-color)' }}>
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/')}>
+          <div className="flex items-center space-x-2 cursor-pointer" onClick={() => { setActiveTab('home'); navigate('/dashboard'); }}>
             <div className="h-9 w-9 rounded-xl gradient-primary-bg flex items-center justify-center text-white font-extrabold shadow-sm">
               L
             </div>
             <span className="font-bold text-lg" style={{ color: 'var(--primary-color)' }}>LaundryIndia</span>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <Button type="primary" className="gradient-primary-bg border-none flex items-center space-x-1" onClick={() => navigate('/book')}>
-              <Plus size={16} />
-              <span>Book New Pickup</span>
-            </Button>
+          <div className="flex items-center space-x-3">
+            <Button
+              type="text"
+              icon={isDarkMode ? <Sun size={18} className="text-yellow-500" /> : <Moon size={18} className="text-slate-600" />}
+              onClick={toggleTheme}
+              className="flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+            />
             <Button
               type="text"
               icon={<LogOut size={18} />}
               onClick={handleLogout}
-              className="flex items-center justify-center text-red-500 hover:text-red-700"
+              className="flex items-center justify-center text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg font-medium"
             >
-              Logout
+              <span className="hidden sm:inline ml-1">Logout</span>
             </Button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 mt-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
+      {/* Main Content Area */}
+      <div className="max-w-7xl mx-auto px-4 mt-8">
         
-        {/* Left Side Info Panel */}
-        <div className="lg:col-span-1 space-y-6">
-          <Card className="glass-panel border-none shadow-md">
-            <div className="flex flex-col items-center space-y-3 pb-4 border-b" style={{ borderColor: 'var(--border-color)' }}>
-              <div className="h-16 w-16 rounded-full gradient-primary-bg flex items-center justify-center text-white text-2xl font-bold">
-                {user?.name[0]}
-              </div>
-              <h3 className="font-bold text-lg text-center">{user?.name}</h3>
-              <Tag color="blue" className="uppercase font-semibold text-xs tracking-wider">{user?.role}</Tag>
-              <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{user?.phone}</span>
+        {/* Render HOME tab */}
+        {activeTab === 'home' && (
+          <div className="space-y-6 animate-fade-in">
+            {/* KPI Dashboard Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <Card className="glass-panel border-none shadow-sm gradient-premium-card">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-semibold block" style={{ color: 'var(--text-muted)' }}>ACTIVE BOOKINGS</span>
+                    <span className="text-3xl font-extrabold tracking-tight mt-1 block">{activeOrders}</span>
+                  </div>
+                  <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                    <Activity size={20} />
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="glass-panel border-none shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-semibold block" style={{ color: 'var(--text-muted)' }}>COMPLETED DELIVERIES</span>
+                    <span className="text-3xl font-extrabold tracking-tight mt-1 block text-green-600">{completedOrders}</span>
+                  </div>
+                  <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                    <CheckCircle size={20} />
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="glass-panel border-none shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-semibold block" style={{ color: 'var(--text-muted)' }}>WALLET BALANCE</span>
+                    <span className="text-3xl font-extrabold tracking-tight mt-1 block text-blue-600">₹0.00</span>
+                  </div>
+                  <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600">
+                    <IndianRupee size={20} />
+                  </div>
+                </div>
+              </Card>
             </div>
 
-            <div className="pt-4 space-y-2">
-              <div className="flex justify-between text-xs">
-                <span style={{ color: 'var(--text-muted)' }}>Registered Email:</span>
-                <span className="font-semibold">{user?.email || 'Not configured'}</span>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Account Summary */}
+              <div className="lg:col-span-1">
+                <Card className="glass-panel border-none shadow-md" title={<span className="font-bold text-sm">Account Overview</span>}>
+                  <div className="flex flex-col items-center space-y-3 pb-4 border-b" style={{ borderColor: 'var(--border-color)' }}>
+                    <div className="h-16 w-16 rounded-full gradient-primary-bg flex items-center justify-center text-white text-2xl font-bold">
+                      {user?.name[0]}
+                    </div>
+                    <h3 className="font-bold text-lg text-center">{user?.name}</h3>
+                    <Tag color="blue" className="uppercase font-semibold text-xs tracking-wider">{user?.role}</Tag>
+                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{user?.phone}</span>
+                  </div>
+
+                  <div className="pt-4 space-y-2">
+                    <div className="flex justify-between text-xs">
+                      <span style={{ color: 'var(--text-muted)' }}>Registered Email:</span>
+                      <span className="font-semibold">{user?.email || 'Not configured'}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span style={{ color: 'var(--text-muted)' }}>Total Paid Spend:</span>
+                      <span className="font-semibold text-green-600">₹{totalSpend.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </Card>
               </div>
-              <div className="flex justify-between text-xs">
-                <span style={{ color: 'var(--text-muted)' }}>Total Paid Spend:</span>
-                <span className="font-semibold text-green-600">₹{totalSpend.toFixed(2)}</span>
+
+              {/* Notifications */}
+              <div className="lg:col-span-2">
+                <Card className="glass-panel border-none shadow-md" title={
+                  <div className="flex justify-between items-center">
+                    <span className="flex items-center space-x-2 font-bold text-sm">
+                      <Bell size={16} />
+                      <span>Recent Alerts</span>
+                      {unreadNotificationsCount > 0 && <Badge count={unreadNotificationsCount} />}
+                    </span>
+                    {unreadNotificationsCount > 0 && (
+                      <Button type="link" size="small" className="p-0" onClick={() => readAllNotificationsMutation.mutate()}>
+                        Mark read
+                      </Button>
+                    )}
+                  </div>
+                }>
+                  <List
+                    itemLayout="horizontal"
+                    dataSource={notifications.slice(0, 5)}
+                    locale={{ emptyText: 'No alerts found' }}
+                    renderItem={(n: any) => (
+                      <List.Item className="p-2 border-b last:border-b-0" style={{ padding: '8px 0px', borderColor: 'var(--border-color)' }}>
+                        <List.Item.Meta
+                          title={<span className={`text-xs ${n.status === 'unread' ? 'font-bold' : ''}`}>{n.title}</span>}
+                          description={
+                            <div className="space-y-1">
+                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{n.message}</p>
+                              <span className="text-[10px] block" style={{ color: 'var(--text-muted)' }}>
+                                {new Date(n.created_at).toLocaleDateString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                          }
+                        />
+                      </List.Item>
+                    )}
+                  />
+                </Card>
               </div>
             </div>
-          </Card>
+          </div>
+        )}
 
-          {/* Quick Notification Box */}
-          <Card className="glass-panel border-none shadow-md" title={
-            <div className="flex justify-between items-center">
-              <span className="flex items-center space-x-2 font-bold text-sm">
-                <Bell size={16} />
-                <span>Notifications</span>
-                {unreadNotificationsCount > 0 && <Badge count={unreadNotificationsCount} />}
-              </span>
-              {unreadNotificationsCount > 0 && (
-                <Button type="link" size="small" className="p-0" onClick={() => readAllNotificationsMutation.mutate()}>
-                  Mark read
+        {/* Render BOOK tab (Inline booking stepper flow) */}
+        {activeTab === 'book' && (
+          <div className="animate-fade-in">
+            <BookingFlow inlined={true} onClose={() => setActiveTab('home')} />
+          </div>
+        )}
+
+        {/* Render ORDERS tab (Order history list) */}
+        {activeTab === 'orders' && (
+          <div className="animate-fade-in">
+            <Card className="glass-panel border-none shadow-md" title={<span className="font-bold text-sm">Order History & Tracking</span>}>
+              <Table
+                dataSource={orders}
+                rowKey="id"
+                loading={ordersLoading}
+                pagination={{ pageSize: 8 }}
+                columns={[
+                  {
+                    title: 'Order ID',
+                    dataIndex: 'id',
+                    key: 'id',
+                    render: (id) => <strong className="text-blue-600">#{id}</strong>
+                  },
+                  {
+                    title: 'Pickup Date',
+                    dataIndex: 'pickup_date',
+                    key: 'pickup_date',
+                    render: (d) => new Date(d).toLocaleDateString('en-IN')
+                  },
+                  {
+                    title: 'Delivery Mode',
+                    dataIndex: 'delivery_preference',
+                    key: 'delivery_preference',
+                    render: (pref) => <span className="capitalize">{pref}</span>
+                  },
+                  {
+                    title: 'Status',
+                    dataIndex: 'status',
+                    key: 'status',
+                    render: (status) => (
+                      <Tag color={getStatusColor(status)}>
+                        {status.replace(/_/g, ' ').toUpperCase()}
+                      </Tag>
+                    )
+                  },
+                  {
+                    title: 'Amount',
+                    dataIndex: 'grand_total',
+                    key: 'grand_total',
+                    render: (total) => <span className="font-semibold text-slate-800">₹{total}</span>
+                  },
+                  {
+                    title: 'Action',
+                    key: 'action',
+                    render: (_, record: any) => (
+                      <Button
+                        type="default"
+                        icon={<Eye size={14} />}
+                        onClick={() => navigate(`/track/${record.id}`)}
+                        className="flex items-center space-x-1 hover:border-blue-500"
+                      >
+                        Track
+                      </Button>
+                    )
+                  }
+                ]}
+              />
+            </Card>
+          </div>
+        )}
+
+        {/* Render PROFILE tab (Profile form & Address book) */}
+        {activeTab === 'profile' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fade-in">
+            {/* Profile Config */}
+            <Card className="glass-panel border-none shadow-md" title={<span className="font-bold text-sm">Profile Details</span>}>
+              <Form
+                form={profileForm}
+                layout="vertical"
+                initialValues={{ name: user?.name, email: user?.email }}
+                onFinish={(values) => profileMutation.mutate(values)}
+                requiredMark={false}
+                className="mt-2"
+              >
+                <Form.Item label="Contact Name" name="name" rules={[{ required: true }]}>
+                  <Input placeholder="Enter your name" className="h-10" />
+                </Form.Item>
+                <Form.Item label="Email Address" name="email">
+                  <Input placeholder="Enter your email" type="email" className="h-10" />
+                </Form.Item>
+                <Form.Item>
+                  <Button type="primary" htmlType="submit" className="gradient-primary-bg border-none" loading={profileMutation.isPending}>
+                    Save Changes
+                  </Button>
+                </Form.Item>
+              </Form>
+            </Card>
+
+            {/* Address Manager */}
+            <Card className="glass-panel border-none shadow-md" title={
+              <div className="flex justify-between items-center w-full">
+                <span className="font-bold text-sm">Address Book</span>
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<Plus size={14} />}
+                  onClick={() => {
+                    setEditingAddress(null);
+                    addressForm.resetFields();
+                    setAddressModalOpen(true);
+                  }}
+                  className="gradient-primary-bg border-none flex items-center"
+                >
+                  Add
                 </Button>
-              )}
-            </div>
-          }>
-            <List
-              itemLayout="horizontal"
-              dataSource={notifications.slice(0, 5)}
-              locale={{ emptyText: 'No alerts found' }}
-              renderItem={(n: any) => (
-                <List.Item className="p-2 border-b last:border-b-0" style={{ padding: '8px 0px', borderColor: 'var(--border-color)' }}>
-                  <List.Item.Meta
-                    title={<span className={`text-xs ${n.status === 'unread' ? 'font-bold' : ''}`}>{n.title}</span>}
-                    description={
-                      <div className="space-y-1">
-                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{n.message}</p>
-                        <span className="text-[10px] block" style={{ color: 'var(--text-muted)' }}>
-                          {new Date(n.created_at).toLocaleDateString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+              </div>
+            }>
+              <div className="grid grid-cols-1 gap-4 max-h-[450px] overflow-y-auto pr-1">
+                {addresses.map((addr: any) => (
+                  <Card
+                    key={addr.id}
+                    className="border border-slate-200 relative hover:border-blue-500 transition-colors"
+                    title={
+                      <div className="flex items-center space-x-2">
+                        <MapPin size={16} className="text-blue-500" />
+                        <span className="font-bold text-sm">{addr.tag}</span>
+                        {addr.is_default && <Tag color="green" className="text-[10px]">Default</Tag>}
                       </div>
                     }
-                  />
-                </List.Item>
-              )}
-            />
-          </Card>
-        </div>
-
-        {/* Right Side Main Operations Panel */}
-        <div className="lg:col-span-3 space-y-6">
-          
-          {/* KPI Dashboard Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <Card className="glass-panel border-none shadow-sm gradient-premium-card">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-semibold block" style={{ color: 'var(--text-muted)' }}>ACTIVE BOOKINGS</span>
-                  <span className="text-3xl font-extrabold tracking-tight mt-1 block">{activeOrders}</span>
-                </div>
-                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                  <Activity size={20} />
-                </div>
-              </div>
-            </Card>
-
-            <Card className="glass-panel border-none shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-semibold block" style={{ color: 'var(--text-muted)' }}>COMPLETED DELIVERIES</span>
-                  <span className="text-3xl font-extrabold tracking-tight mt-1 block text-green-600">{completedOrders}</span>
-                </div>
-                <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-                  <CheckCircle size={20} />
-                </div>
-              </div>
-            </Card>
-
-            <Card className="glass-panel border-none shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-semibold block" style={{ color: 'var(--text-muted)' }}>WALLET BALANCE</span>
-                  <span className="text-3xl font-extrabold tracking-tight mt-1 block text-blue-600">₹0.00</span>
-                </div>
-                <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600">
-                  <IndianRupee size={20} />
-                </div>
+                    extra={
+                      <Space>
+                        <Button type="link" size="small" className="p-0" onClick={() => handleOpenEditAddress(addr)}>Edit</Button>
+                        <Popconfirm
+                          title="Delete this address?"
+                          onConfirm={() => deleteAddressMutation.mutate(addr.id)}
+                          okText="Yes"
+                          cancelText="No"
+                        >
+                          <Button type="text" danger size="small" icon={<Trash2 size={14} />}></Button>
+                        </Popconfirm>
+                      </Space>
+                    }
+                  >
+                    <p className="text-xs text-slate-600">{addr.address_line_1}</p>
+                    {addr.address_line_2 && <p className="text-xs text-slate-600">{addr.address_line_2}</p>}
+                    <p className="text-xs font-semibold text-slate-700 mt-2">
+                      {addr.city}, {addr.state} - {addr.pincode}
+                    </p>
+                  </Card>
+                ))}
+                {addresses.length === 0 && (
+                  <div className="text-center py-8 text-slate-400">
+                    No addresses saved yet. Add one to begin bookings.
+                  </div>
+                )}
               </div>
             </Card>
           </div>
+        )}
+      </div>
 
-          {/* Sub Panels Tabs */}
-          <Card className="glass-panel border-none shadow-md">
-            <Tabs defaultActiveKey="orders">
-              
-              {/* Order History list */}
-              <TabPane tab="My Laundry Orders" key="orders">
-                <Table
-                  dataSource={orders}
-                  rowKey="id"
-                  loading={ordersLoading}
-                  pagination={{ pageSize: 5 }}
-                  columns={[
-                    {
-                      title: 'Order ID',
-                      dataIndex: 'id',
-                      key: 'id',
-                      render: (id) => <strong className="text-blue-600">#{id}</strong>
-                    },
-                    {
-                      title: 'Pickup Date',
-                      dataIndex: 'pickup_date',
-                      key: 'pickup_date',
-                      render: (d) => new Date(d).toLocaleDateString('en-IN')
-                    },
-                    {
-                      title: 'Delivery Mode',
-                      dataIndex: 'delivery_preference',
-                      key: 'delivery_preference',
-                      render: (pref) => <span className="capitalize">{pref}</span>
-                    },
-                    {
-                      title: 'Status',
-                      dataIndex: 'status',
-                      key: 'status',
-                      render: (status) => (
-                        <Tag color={getStatusColor(status)}>
-                          {status.replace(/_/g, ' ').toUpperCase()}
-                        </Tag>
-                      )
-                    },
-                    {
-                      title: 'Amount',
-                      dataIndex: 'grand_total',
-                      key: 'grand_total',
-                      render: (total) => <span className="font-semibold text-slate-800">₹{total}</span>
-                    },
-                    {
-                      title: 'Action',
-                      key: 'action',
-                      render: (_, record: any) => (
-                        <Button
-                          type="default"
-                          icon={<Eye size={14} />}
-                          onClick={() => navigate(`/track/${record.id}`)}
-                          className="flex items-center space-x-1 hover:border-blue-500"
-                        >
-                          Track
-                        </Button>
-                      )
-                    }
-                  ]}
-                />
-              </TabPane>
+      {/* Floating Bottom Navigation Bar */}
+      <div className="fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-1/2 sm:-translate-x-1/2 z-50 px-0 sm:px-4 sm:max-w-md w-full">
+        <div className="bg-white/95 dark:bg-[#1E2024]/95 border-t sm:border border-slate-200/80 dark:border-slate-800/80 shadow-2xl rounded-t-2xl sm:rounded-full py-3 px-8 flex justify-between items-center backdrop-blur-md">
+          <button
+            onClick={() => setActiveTab('home')}
+            className={`flex flex-col items-center justify-center space-y-1 bg-transparent border-none outline-none cursor-pointer transition-colors duration-200 ${
+              activeTab === 'home' ? 'text-[#FF6B00]' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+            }`}
+          >
+            <Home size={20} className={activeTab === 'home' ? 'stroke-[2.5]' : 'stroke-[1.5]'} />
+            <span className="text-[10px] font-semibold">Home</span>
+          </button>
 
-              {/* Address Manager */}
-              <TabPane tab="Address Book" key="addresses">
-                <div className="flex justify-between items-center mb-6">
-                  <h4 className="font-bold text-sm">Saved Addresses</h4>
-                  <Button
-                    type="primary"
-                    icon={<Plus size={16} />}
-                    onClick={() => {
-                      setEditingAddress(null);
-                      addressForm.resetFields();
-                      setAddressModalOpen(true);
-                    }}
-                    className="gradient-primary-bg border-none"
-                  >
-                    Add Address
-                  </Button>
-                </div>
+          <button
+            onClick={() => setActiveTab('book')}
+            className={`flex flex-col items-center justify-center space-y-1 bg-transparent border-none outline-none cursor-pointer transition-colors duration-200 ${
+              activeTab === 'book' ? 'text-[#FF6B00]' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+            }`}
+          >
+            <Sparkles size={20} className={activeTab === 'book' ? 'stroke-[2.5]' : 'stroke-[1.5]'} />
+            <span className="text-[10px] font-semibold">Book</span>
+          </button>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {addresses.map((addr: any) => (
-                    <Card
-                      key={addr.id}
-                      className="border border-slate-200 relative hover:border-blue-500 transition-colors"
-                      title={
-                        <div className="flex items-center space-x-2">
-                          <MapPin size={16} className="text-blue-500" />
-                          <span className="font-bold text-sm">{addr.tag}</span>
-                          {addr.is_default && <Tag color="green" className="text-[10px]">Default</Tag>}
-                        </div>
-                      }
-                      extra={
-                        <Space>
-                          <Button type="link" size="small" onClick={() => handleOpenEditAddress(addr)}>Edit</Button>
-                          <Popconfirm
-                            title="Delete this address?"
-                            onConfirm={() => deleteAddressMutation.mutate(addr.id)}
-                            okText="Yes"
-                            cancelText="No"
-                          >
-                            <Button type="text" danger size="small" icon={<Trash2 size={14} />}></Button>
-                          </Popconfirm>
-                        </Space>
-                      }
-                    >
-                      <p className="text-xs text-slate-600">{addr.address_line_1}</p>
-                      {addr.address_line_2 && <p className="text-xs text-slate-600">{addr.address_line_2}</p>}
-                      <p className="text-xs font-semibold text-slate-700 mt-2">
-                        {addr.city}, {addr.state} - {addr.pincode}
-                      </p>
-                    </Card>
-                  ))}
-                  {addresses.length === 0 && (
-                    <div className="col-span-2 text-center py-8 text-slate-400">
-                      No addresses saved yet. Add one to begin bookings.
-                    </div>
-                  )}
-                </div>
-              </TabPane>
+          <button
+            onClick={() => setActiveTab('orders')}
+            className={`flex flex-col items-center justify-center space-y-1 bg-transparent border-none outline-none cursor-pointer transition-colors duration-200 ${
+              activeTab === 'orders' ? 'text-[#FF6B00]' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+            }`}
+          >
+            <ClipboardList size={20} className={activeTab === 'orders' ? 'stroke-[2.5]' : 'stroke-[1.5]'} />
+            <span className="text-[10px] font-semibold">Orders</span>
+          </button>
 
-              {/* Profile Config */}
-              <TabPane tab="Profile Settings" key="profile">
-                <Form
-                  form={profileForm}
-                  layout="vertical"
-                  initialValues={{ name: user?.name, email: user?.email }}
-                  onFinish={(values) => profileMutation.mutate(values)}
-                  requiredMark={false}
-                  className="max-w-md mt-4"
-                >
-                  <Form.Item label="Contact Name" name="name" rules={[{ required: true }]}>
-                    <Input placeholder="Enter your name" className="h-10" />
-                  </Form.Item>
-                  <Form.Item label="Email Address" name="email">
-                    <Input placeholder="Enter your email" type="email" className="h-10" />
-                  </Form.Item>
-                  <Form.Item>
-                    <Button type="primary" htmlType="submit" className="gradient-primary-bg border-none" loading={profileMutation.isPending}>
-                      Save Changes
-                    </Button>
-                  </Form.Item>
-                </Form>
-              </TabPane>
-            </Tabs>
-          </Card>
+          <button
+            onClick={() => setActiveTab('profile')}
+            className={`flex flex-col items-center justify-center space-y-1 bg-transparent border-none outline-none cursor-pointer transition-colors duration-200 ${
+              activeTab === 'profile' ? 'text-[#FF6B00]' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+            }`}
+          >
+            <User size={20} className={activeTab === 'profile' ? 'stroke-[2.5]' : 'stroke-[1.5]'} />
+            <span className="text-[10px] font-semibold">Profile</span>
+          </button>
         </div>
       </div>
 

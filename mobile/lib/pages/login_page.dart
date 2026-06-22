@@ -57,6 +57,7 @@ class _LoginPageState extends State<LoginPage> {
       final response = await ApiService().sendOtp(phone);
       final data = response.data;
       
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('OTP sent successfully (Simulated)')),
       );
@@ -67,6 +68,7 @@ class _LoginPageState extends State<LoginPage> {
         _debugOtp = data['debugOtp']?.toString();
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to send OTP code. Please retry.')),
       );
@@ -97,9 +99,11 @@ class _LoginPageState extends State<LoginPage> {
       final token = data['token'] as String;
       final user = User.fromJson(data['user'] as Map<String, dynamic>);
 
+      if (!mounted) return;
       // Save to global auth provider
       await Provider.of<AuthProvider>(context, listen: false).setAuth(token, user);
       
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Login successful!')),
       );
@@ -111,6 +115,7 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.pushReplacementNamed(context, '/dashboard');
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('OTP verification failed. Please try again.')),
       );
@@ -145,8 +150,8 @@ class _LoginPageState extends State<LoginPage> {
                 height: 60,
                 width: 60,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF021024), Color(0xFF0c2b54)],
+                  gradient: LinearGradient(
+                    colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
                   ),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: const [
@@ -168,7 +173,7 @@ class _LoginPageState extends State<LoginPage> {
                 'Welcome to LaundryIndia',
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: isDark ? Colors.white : const Color(0xFF021024),
+                  color: isDark ? Colors.white : const Color(0xFF1F2937),
                 ),
               ),
               const SizedBox(height: 8),
@@ -219,7 +224,7 @@ class _LoginPageState extends State<LoginPage> {
           child: ElevatedButton(
             onPressed: _isLoading ? null : _handleSendOtp,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF021024),
+              backgroundColor: theme.colorScheme.primary,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
@@ -269,18 +274,18 @@ class _LoginPageState extends State<LoginPage> {
             padding: const EdgeInsets.all(12),
             margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.08),
+              color: theme.colorScheme.primary.withOpacity(0.08),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue.withOpacity(0.3)),
+              border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3)),
             ),
             child: Row(
               children: [
-                const Icon(LucideIcons.sparkles, color: Colors.blue, size: 16),
+                const Icon(LucideIcons.sparkles, color: Colors.orange, size: 16),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Simulated OTP code is: $_debugOtp\n(Or use bypass code: 123456)',
-                    style: const TextStyle(fontSize: 11, color: Colors.blue, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 11, color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
                   ),
                 )
               ],
@@ -312,7 +317,7 @@ class _LoginPageState extends State<LoginPage> {
           child: ElevatedButton(
             onPressed: _isLoading ? null : _handleVerifyOtp,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF021024),
+              backgroundColor: theme.colorScheme.primary,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),

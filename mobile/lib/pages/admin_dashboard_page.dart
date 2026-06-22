@@ -66,10 +66,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   Future<void> _handleUpdateStatus(int orderId, String status) async {
     try {
       await ApiService().updateOrderStatus(orderId, status);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Status updated')));
       _fetchStats();
       _fetchOrders();
     } catch (_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to update status')));
     }
   }
@@ -77,10 +79,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   Future<void> _handleUpdatePayment(int orderId, String paymentStatus) async {
     try {
       await ApiService().updateOrderPaymentStatus(orderId, paymentStatus);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment status updated')));
       _fetchStats();
       _fetchOrders();
     } catch (_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to update payment status')));
     }
   }
@@ -106,6 +110,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             icon: const Icon(LucideIcons.logOut, color: Colors.red),
             onPressed: () async {
               await auth.logout();
+              if (!mounted) return;
               Navigator.pushReplacementNamed(context, '/');
             },
           )
@@ -116,15 +121,15 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           padding: EdgeInsets.zero,
           children: [
             DrawerHeader(
-              decoration: const BoxDecoration(color: Color(0xFF021024)),
+              decoration: BoxDecoration(color: theme.colorScheme.primary),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const CircleAvatar(backgroundColor: Color(0xFF7DA0CA), child: Icon(LucideIcons.shieldCheck, color: Color(0xFF021024))),
+                  CircleAvatar(backgroundColor: Colors.white, child: Icon(LucideIcons.shieldCheck, color: theme.colorScheme.primary)),
                   const SizedBox(height: 12),
                   const Text('LaundryIndia Admin', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                  Text(auth.user?.phone ?? '', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  Text(auth.user?.phone ?? '', style: const TextStyle(color: Colors.white70, fontSize: 12)),
                 ],
               ),
             ),

@@ -4,6 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../services/api_service.dart';
 import '../store/auth_provider.dart';
 import '../models/models.dart';
+import 'booking_flow_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -12,8 +13,8 @@ class DashboardPage extends StatefulWidget {
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
-class _DashboardPageState extends State<DashboardPage> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _DashboardPageState extends State<DashboardPage> {
+  int _currentIndex = 0;
 
   List<Order> _orders = [];
   List<Address> _addresses = [];
@@ -40,7 +41,6 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
     
     final auth = Provider.of<AuthProvider>(context, listen: false);
     _nameController.text = auth.user?.name ?? '';
@@ -51,7 +51,6 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
 
   @override
   void dispose() {
-    _tabController.dispose();
     _nameController.dispose();
     _emailController.dispose();
     _addressLine1Controller.dispose();
@@ -69,28 +68,32 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
   }
 
   Future<void> _fetchOrders() async {
-    setState(() => _isLoadingOrders = true);
+    if (mounted) setState(() => _isLoadingOrders = true);
     try {
       final res = await ApiService().getOrders();
       final list = res.data as List;
-      setState(() {
-        _orders = list.map((o) => Order.fromJson(o as Map<String, dynamic>)).toList();
-      });
+      if (mounted) {
+        setState(() {
+          _orders = list.map((o) => Order.fromJson(o as Map<String, dynamic>)).toList();
+        });
+      }
     } catch (_) {} finally {
-      setState(() => _isLoadingOrders = false);
+      if (mounted) setState(() => _isLoadingOrders = false);
     }
   }
 
   Future<void> _fetchAddresses() async {
-    setState(() => _isLoadingAddresses = true);
+    if (mounted) setState(() => _isLoadingAddresses = true);
     try {
       final res = await ApiService().getAddresses();
       final list = res.data as List;
-      setState(() {
-        _addresses = list.map((a) => Address.fromJson(a as Map<String, dynamic>)).toList();
-      });
+      if (mounted) {
+        setState(() {
+          _addresses = list.map((a) => Address.fromJson(a as Map<String, dynamic>)).toList();
+        });
+      }
     } catch (_) {} finally {
-      setState(() => _isLoadingAddresses = false);
+      if (mounted) setState(() => _isLoadingAddresses = false);
     }
   }
 
@@ -99,10 +102,12 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
       final res = await ApiService().getNotifications();
       final list = res.data as List;
       final notificationsList = list.map((n) => NotificationModel.fromJson(n as Map<String, dynamic>)).toList();
-      setState(() {
-        _notifications = notificationsList;
-        _unreadNotifications = notificationsList.where((n) => n.status == 'unread').length;
-      });
+      if (mounted) {
+        setState(() {
+          _notifications = notificationsList;
+          _unreadNotifications = notificationsList.where((n) => n.status == 'unread').length;
+        });
+      }
     } catch (_) {}
   }
 
@@ -115,18 +120,23 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
       
       await ApiService().updateProfile(name, email.isEmpty ? null : email);
       
+      if (!mounted) return;
       // Update local provider
       await Provider.of<AuthProvider>(context, listen: false).updateProfileLocal(name, email.isEmpty ? null : email);
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile settings updated successfully')),
       );
     } catch (_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to update profile settings')),
       );
     } finally {
-      setState(() => _isSavingProfile = false);
+      if (mounted) {
+        setState(() => _isSavingProfile = false);
+      }
     }
   }
 
@@ -146,14 +156,18 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
     try {
       if (_editingAddress == null) {
         await ApiService().addAddress(payload);
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Address added successfully')));
       } else {
         await ApiService().updateAddress(_editingAddress!.id, payload);
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Address updated successfully')));
       }
+      if (!mounted) return;
       Navigator.pop(context);
       _fetchAddresses();
     } catch (_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to save address details')));
     }
   }
@@ -161,9 +175,11 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
   Future<void> _handleDeleteAddress(int id) async {
     try {
       await ApiService().deleteAddress(id);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Address deleted successfully')));
       _fetchAddresses();
     } catch (_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to delete address')));
     }
   }
@@ -263,7 +279,7 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
             ElevatedButton(
               onPressed: _handleSaveAddress,
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF021024), foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Colors.white),
               child: const Text('Save'),
             )
           ],
@@ -325,132 +341,188 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
     final isDark = auth.isDarkMode;
-    final user = auth.user;
     final theme = Theme.of(context);
 
+    return Scaffold(
+      appBar: _currentIndex == 1
+          ? null // Hide appbar when booking flow is active to prevent nested headers
+          : AppBar(
+              title: const Text('LaundryIndia', style: TextStyle(fontWeight: FontWeight.bold)),
+              actions: [
+                IconButton(
+                  icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+                  onPressed: () => auth.toggleTheme(),
+                ),
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    IconButton(
+                      icon: const Icon(LucideIcons.bell),
+                      onPressed: _showNotificationsDialog,
+                    ),
+                    if (_unreadNotifications > 0)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                          child: Text('$_unreadNotifications', style: const TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold)),
+                        ),
+                      )
+                  ],
+                ),
+                IconButton(
+                  icon: const Icon(LucideIcons.logOut, color: Colors.red),
+                  onPressed: () async {
+                    await auth.logout();
+                    if (!context.mounted) return;
+                    Navigator.pushReplacementNamed(context, '/');
+                  },
+                )
+              ],
+            ),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          _buildHomeView(theme, auth),
+          BookingFlowPage(
+            onClose: () {
+              setState(() {
+                _currentIndex = 0; // Redirect back to Home
+              });
+            },
+          ),
+          _buildOrdersView(theme),
+          _buildProfileView(theme, auth),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: theme.colorScheme.primary,
+        unselectedItemColor: Colors.grey,
+        backgroundColor: theme.brightness == Brightness.dark ? const Color(0xFF1E2024) : Colors.white,
+        elevation: 8,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+          _loadData();
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(LucideIcons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(LucideIcons.plusCircle), label: 'Book'),
+          BottomNavigationBarItem(icon: Icon(LucideIcons.list), label: 'Orders'),
+          BottomNavigationBarItem(icon: Icon(LucideIcons.user), label: 'Profile'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHomeView(ThemeData theme, AuthProvider auth) {
     final activeOrdersCount = _orders.where((o) => o.status != 'delivered').length;
     final completedOrdersCount = _orders.where((o) => o.status == 'delivered').length;
     final totalPaidSpend = _orders
         .where((o) => o.paymentStatus == 'paid')
         .fold(0.0, (sum, o) => sum + o.grandTotal);
+    final user = auth.user;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('LaundryIndia', style: TextStyle(fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(
-            icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
-            onPressed: () => auth.toggleTheme(),
-          ),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(LucideIcons.bell),
-                onPressed: _showNotificationsDialog,
-              ),
-              if (_unreadNotifications > 0)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                    child: Text('$_unreadNotifications', style: const TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold)),
-                  ),
-                )
-            ],
-          ),
-          IconButton(
-            icon: const Icon(LucideIcons.logOut, color: Colors.red),
-            onPressed: () async {
-              await auth.logout();
-              Navigator.pushReplacementNamed(context, '/');
-            },
-          )
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.pushNamed(context, '/book'),
-        backgroundColor: const Color(0xFF021024),
-        foregroundColor: Colors.white,
-        icon: const Icon(LucideIcons.plus, size: 18),
-        label: const Text('Book Order', style: TextStyle(fontWeight: FontWeight.bold)),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // User card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 26,
-                      backgroundColor: const Color(0xFF7DA0CA).withOpacity(0.3),
-                      child: Text(user?.name[0] ?? 'U', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(user?.name ?? '', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                          Text(user?.phone ?? '', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(color: Colors.blue.withOpacity(0.15), borderRadius: BorderRadius.circular(4)),
-                            child: Text(user?.role.toUpperCase() ?? '', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.blue)),
-                          )
-                        ],
-                      ),
-                    )
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // KPI Dashboard Metrics
-            Row(
-              children: [
-                _buildKpiCard('Active', '$activeOrdersCount', LucideIcons.activity, Colors.blue),
-                const SizedBox(width: 12),
-                _buildKpiCard('Delivered', '$completedOrdersCount', LucideIcons.checkCircle, Colors.green),
-                const SizedBox(width: 12),
-                _buildKpiCard('Spend', '₹${totalPaidSpend.toStringAsFixed(0)}', LucideIcons.indianRupee, Colors.orange),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Tab Panels
-            TabBar(
-              controller: _tabController,
-              labelColor: isDark ? const Color(0xFF7DA0CA) : const Color(0xFF021024),
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: isDark ? const Color(0xFF7DA0CA) : const Color(0xFF021024),
-              tabs: const [
-                Tab(text: 'Orders'),
-                Tab(text: 'Addresses'),
-                Tab(text: 'Profile'),
-              ],
-            ),
-            SizedBox(
-              height: 400,
-              child: TabBarView(
-                controller: _tabController,
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          // User card
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
                 children: [
-                  _buildOrdersTab(theme),
-                  _buildAddressesTab(theme),
-                  _buildProfileTab(theme),
+                  CircleAvatar(
+                    radius: 26,
+                    backgroundColor: theme.colorScheme.primary.withOpacity(0.15),
+                    child: Text(user?.name[0] ?? 'U', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(user?.name ?? '', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                        Text(user?.phone ?? '', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(color: theme.colorScheme.primary.withOpacity(0.15), borderRadius: BorderRadius.circular(4)),
+                          child: Text(user?.role.toUpperCase() ?? '', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
+                        )
+                      ],
+                    ),
+                  )
                 ],
               ),
-            )
-          ],
-        ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // KPI Dashboard Metrics
+          Row(
+            children: [
+              _buildKpiCard('Active', '$activeOrdersCount', LucideIcons.activity, Colors.blue),
+              const SizedBox(width: 12),
+              _buildKpiCard('Delivered', '$completedOrdersCount', LucideIcons.checkCircle, Colors.green),
+              const SizedBox(width: 12),
+              _buildKpiCard('Spend', '₹${totalPaidSpend.toStringAsFixed(0)}', LucideIcons.indianRupee, theme.colorScheme.primary),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // Action booking banner
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: auth.isDarkMode
+                    ? [const Color(0xFF1E2024), const Color(0xFF111215)]
+                    : [const Color(0xFFE5E7EB), Colors.white],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: theme.colorScheme.primary.withOpacity(0.15)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Need Laundry Done?',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: auth.isDarkMode ? Colors.white : const Color(0xFF1F2937)),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Book premium washing, dry cleaning, or steam pressing in seconds.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _currentIndex = 1; // Switch to Book tab!
+                    });
+                  },
+                  icon: const Icon(LucideIcons.plusCircle, size: 16),
+                  label: const Text('Book Order Now', style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -479,16 +551,30 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
     );
   }
 
-  Widget _buildOrdersTab(ThemeData theme) {
+  Widget _buildOrdersView(ThemeData theme) {
     if (_isLoadingOrders) {
       return const Center(child: CircularProgressIndicator());
     }
     if (_orders.isEmpty) {
-      return const Center(child: Text('No orders found', style: TextStyle(color: Colors.grey)));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(LucideIcons.list, size: 48, color: Colors.grey),
+            const SizedBox(height: 12),
+            const Text('No orders found', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => setState(() => _currentIndex = 1),
+              child: const Text('Make your first booking'),
+            )
+          ],
+        ),
+      );
     }
     return ListView.builder(
       itemCount: _orders.length,
-      padding: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(16.0),
       itemBuilder: (context, idx) {
         final o = _orders[idx];
         return Card(
@@ -505,109 +591,124 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
                 Text(o.status.toUpperCase().replaceAll('_', ' '), style: TextStyle(fontSize: 9, color: o.status == 'delivered' ? Colors.green : Colors.orange, fontWeight: FontWeight.bold)),
               ],
             ),
-            onTap: () => Navigator.pushNamed(context, '/track/${o.id}'),
+            onTap: () => Navigator.pushNamed(context, '/track/${o.id}').then((_) => _loadData()),
           ),
         );
       },
     );
   }
 
-  Widget _buildAddressesTab(ThemeData theme) {
-    if (_isLoadingAddresses) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    return Column(
-      children: [
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('Saved Addresses', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-            ElevatedButton.icon(
-              onPressed: () => _showAddressDialog(),
-              icon: const Icon(LucideIcons.plus, size: 14),
-              label: const Text('Add Address', style: TextStyle(fontSize: 11)),
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF021024), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0)),
-            )
-          ],
-        ),
-        const SizedBox(height: 12),
-        Expanded(
-          child: _addresses.isEmpty
-              ? const Center(child: Text('No addresses saved. Add one to start bookings.', style: TextStyle(color: Colors.grey)))
-              : ListView.builder(
-                  itemCount: _addresses.length,
-                  itemBuilder: (context, idx) {
-                    final a = _addresses[idx];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(LucideIcons.mapPin, color: Colors.blue, size: 18),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(a.tag, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                      if (a.isDefault) ...[
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                          decoration: BoxDecoration(color: Colors.green.withOpacity(0.15), borderRadius: BorderRadius.circular(4)),
-                                          child: const Text('DEFAULT', style: TextStyle(fontSize: 8, color: Colors.green, fontWeight: FontWeight.bold)),
-                                        )
-                                      ]
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(a.addressLine1, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                                  if (a.addressLine2 != null) Text(a.addressLine2!, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                                  Text('${a.city}, ${a.state} - ${a.pincode}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                                ],
-                              ),
-                            ),
-                            IconButton(icon: const Icon(LucideIcons.edit2, size: 16), onPressed: () => _showAddressDialog(a)),
-                            IconButton(icon: const Icon(LucideIcons.trash2, size: 16, color: Colors.red), onPressed: () => _handleDeleteAddress(a.id)),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-        )
-      ],
-    );
-  }
-
-  Widget _buildProfileTab(ThemeData theme) {
-    return Form(
-      key: _profileFormKey,
-      child: ListView(
-        padding: const EdgeInsets.only(top: 12),
+  Widget _buildProfileView(ThemeData theme, AuthProvider auth) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextFormField(
-            controller: _nameController,
-            decoration: const InputDecoration(labelText: 'Contact Name'),
-            validator: (v) => v!.trim().isEmpty ? 'Name is required' : null,
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _emailController,
-            decoration: const InputDecoration(labelText: 'Email Address'),
-            keyboardType: TextInputType.emailAddress,
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _profileFormKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Profile Settings', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    const Divider(),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(labelText: 'Contact Name'),
+                      validator: (v) => v!.trim().isEmpty ? 'Name is required' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _emailController,
+                      decoration: const InputDecoration(labelText: 'Email Address'),
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isSavingProfile ? null : _handleSaveProfile,
+                        style: ElevatedButton.styleFrom(backgroundColor: theme.colorScheme.primary, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
+                        child: _isSavingProfile ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Save Profile Changes', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    )
+                  ],
+                ),
+              ),
+            ),
           ),
           const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: _isSavingProfile ? null : _handleSaveProfile,
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF021024), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14)),
-            child: _isSavingProfile ? const CircularProgressIndicator(color: Colors.white) : const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold)),
-          )
+          
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Saved Addresses', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              ElevatedButton.icon(
+                onPressed: () => _showAddressDialog(),
+                icon: const Icon(LucideIcons.plus, size: 14),
+                label: const Text('Add Address', style: TextStyle(fontSize: 11)),
+                style: ElevatedButton.styleFrom(backgroundColor: theme.colorScheme.primary, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0)),
+              )
+            ],
+          ),
+          const SizedBox(height: 12),
+          _isLoadingAddresses
+              ? const Center(child: CircularProgressIndicator())
+              : _addresses.isEmpty
+                  ? const Center(child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20.0),
+                      child: Text('No addresses saved. Add one to start bookings.', style: TextStyle(color: Colors.grey)),
+                    ))
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _addresses.length,
+                      itemBuilder: (context, idx) {
+                        final a = _addresses[idx];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(LucideIcons.mapPin, color: theme.colorScheme.primary, size: 18),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(a.tag, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                          if (a.isDefault) ...[
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                              decoration: BoxDecoration(color: Colors.green.withOpacity(0.15), borderRadius: BorderRadius.circular(4)),
+                                              child: const Text('DEFAULT', style: TextStyle(fontSize: 8, color: Colors.green, fontWeight: FontWeight.bold)),
+                                            )
+                                          ]
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(a.addressLine1, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                      if (a.addressLine2 != null) Text(a.addressLine2!, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                      Text('${a.city}, ${a.state} - ${a.pincode}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(icon: const Icon(LucideIcons.edit2, size: 16), onPressed: () => _showAddressDialog(a)),
+                                IconButton(icon: const Icon(LucideIcons.trash2, size: 16, color: Colors.red), onPressed: () => _handleDeleteAddress(a.id)),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    )
         ],
       ),
     );

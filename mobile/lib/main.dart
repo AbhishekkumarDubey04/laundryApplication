@@ -36,12 +36,14 @@ class LaundryIndiaApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
 
-    // Color definitions matching CSS variables
-    const primaryDark = Color(0xFF021024);
-    const accentLight = Color(0xFF7DA0CA);
-    const bgLight = Color(0xFFF5F8FC);
-    const bgDark = Color(0xFF021024);
-    const cardDark = Color(0xFF051630);
+    // Color definitions matching Gray/Orange color scheme
+    const orangePrimary = Color(0xFFFF6B00);
+    const orangeAccent = Color(0xFFFF8533);
+    const grayBgLight = Color(0xFFF3F4F6);
+    const grayBgDark = Color(0xFF111215);
+    const grayCardDark = Color(0xFF1E2024);
+    const textDark = Color(0xFF1F2937);
+    const textLight = Color(0xFFE5E7EB);
 
     return MaterialApp(
       title: 'LaundryIndia Mobile',
@@ -51,17 +53,17 @@ class LaundryIndiaApp extends StatelessWidget {
       // Light Theme
       theme: ThemeData(
         brightness: Brightness.light,
-        scaffoldBackgroundColor: bgLight,
-        primaryColor: primaryDark,
+        scaffoldBackgroundColor: grayBgLight,
+        primaryColor: orangePrimary,
         colorScheme: const ColorScheme.light(
-          primary: primaryDark,
-          secondary: accentLight,
+          primary: orangePrimary,
+          secondary: orangeAccent,
           surface: Colors.white,
           error: Colors.red,
         ),
         textTheme: GoogleFonts.outfitTextTheme(Theme.of(context).textTheme).copyWith(
-          bodyMedium: GoogleFonts.inter(textStyle: const TextStyle(color: primaryDark)),
-          bodyLarge: GoogleFonts.inter(textStyle: const TextStyle(color: primaryDark)),
+          bodyMedium: GoogleFonts.inter(textStyle: const TextStyle(color: textDark)),
+          bodyLarge: GoogleFonts.inter(textStyle: const TextStyle(color: textDark)),
         ),
         cardTheme: CardThemeData(
           color: Colors.white,
@@ -70,7 +72,7 @@ class LaundryIndiaApp extends StatelessWidget {
         ),
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.white,
-          foregroundColor: primaryDark,
+          foregroundColor: textDark,
           elevation: 0,
         ),
       ),
@@ -78,25 +80,25 @@ class LaundryIndiaApp extends StatelessWidget {
       // Dark Theme
       darkTheme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: bgDark,
-        primaryColor: accentLight,
+        scaffoldBackgroundColor: grayBgDark,
+        primaryColor: orangePrimary,
         colorScheme: const ColorScheme.dark(
-          primary: accentLight,
-          secondary: accentLight,
-          surface: cardDark,
+          primary: orangePrimary,
+          secondary: orangeAccent,
+          surface: grayCardDark,
           error: Colors.red,
         ),
         textTheme: GoogleFonts.outfitTextTheme(Theme.of(context).primaryTextTheme).copyWith(
-          bodyMedium: GoogleFonts.inter(textStyle: const TextStyle(color: Color(0xFFF0F4F9))),
-          bodyLarge: GoogleFonts.inter(textStyle: const TextStyle(color: Color(0xFFF0F4F9))),
+          bodyMedium: GoogleFonts.inter(textStyle: const TextStyle(color: textLight)),
+          bodyLarge: GoogleFonts.inter(textStyle: const TextStyle(color: textLight)),
         ),
         cardTheme: CardThemeData(
-          color: cardDark,
+          color: grayCardDark,
           elevation: 4,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: cardDark,
+          backgroundColor: grayCardDark,
           foregroundColor: Colors.white,
           elevation: 0,
         ),

@@ -63,22 +63,26 @@ class _AdminCouponsPageState extends State<AdminCouponsPage> {
 
     try {
       await ApiService().createCoupon(payload);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Coupon added successfully')));
       Navigator.pop(context);
       _fetchCoupons();
     } catch (_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to add coupon')));
     } finally {
-      setState(() => _isSaving = false);
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
   Future<void> _handleToggleStatus(int id) async {
     try {
       await ApiService().toggleCouponStatus(id);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Coupon status toggled')));
       _fetchCoupons();
     } catch (_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to toggle status')));
     }
   }
@@ -140,7 +144,7 @@ class _AdminCouponsPageState extends State<AdminCouponsPage> {
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
             ElevatedButton(
               onPressed: _isSaving ? null : _handleSaveCoupon,
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF021024), foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Colors.white),
               child: const Text('Save Coupon'),
             )
           ],

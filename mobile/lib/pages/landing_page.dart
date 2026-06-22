@@ -81,7 +81,7 @@ class _LandingPageState extends State<LandingPage> {
           style: TextStyle(
             fontWeight: FontWeight.w800,
             fontSize: 20,
-            color: isDark ? const Color(0xFF7DA0CA) : const Color(0xFF021024),
+            color: theme.colorScheme.primary,
           ),
         ),
         actions: [
@@ -100,7 +100,7 @@ class _LandingPageState extends State<LandingPage> {
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: theme.colorScheme.primary,
-                      foregroundColor: theme.brightness == Brightness.dark ? const Color(0xFF021024) : Colors.white,
+                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                     child: const Text('Dashboard'),
@@ -109,7 +109,7 @@ class _LandingPageState extends State<LandingPage> {
                     onPressed: () => Navigator.pushNamed(context, '/login'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: theme.colorScheme.primary,
-                      foregroundColor: theme.brightness == Brightness.dark ? const Color(0xFF021024) : Colors.white,
+                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                     child: const Text('Login'),
@@ -128,13 +128,13 @@ class _LandingPageState extends State<LandingPage> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: isDark
-                      ? [const Color(0xFF051630), const Color(0xFF021024)]
-                      : [const Color(0xFFE6EDF5), Colors.white],
+                      ? [const Color(0xFF1E2024), const Color(0xFF111215)]
+                      : [const Color(0xFFE5E7EB), Colors.white],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: theme.colorScheme.primary.withOpacity(0.1)),
+                border: Border.all(color: theme.colorScheme.primary.withOpacity(0.15)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,20 +142,20 @@ class _LandingPageState extends State<LandingPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF7DA0CA).withOpacity(0.2),
+                      color: theme.colorScheme.primary.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(LucideIcons.sparkles, size: 14, color: isDark ? const Color(0xFF7DA0CA) : const Color(0xFF021024)),
+                        Icon(LucideIcons.sparkles, size: 14, color: theme.colorScheme.primary),
                         const SizedBox(width: 6),
                         Text(
                           'Premium Doorstep Laundry India',
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: isDark ? const Color(0xFF7DA0CA) : const Color(0xFF021024),
+                            color: theme.colorScheme.primary,
                           ),
                         ),
                       ],
@@ -167,7 +167,7 @@ class _LandingPageState extends State<LandingPage> {
                     style: theme.textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.w800,
                       height: 1.2,
-                      color: isDark ? Colors.white : const Color(0xFF021024),
+                      color: isDark ? Colors.white : const Color(0xFF1F2937),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -182,7 +182,7 @@ class _LandingPageState extends State<LandingPage> {
                         child: ElevatedButton(
                           onPressed: () => Navigator.pushNamed(context, '/login'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF021024),
+                            backgroundColor: theme.colorScheme.primary,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -246,7 +246,7 @@ class _LandingPageState extends State<LandingPage> {
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w800,
-            color: isDark ? const Color(0xFF7DA0CA) : const Color(0xFF021024),
+            color: theme.colorScheme.primary,
           ),
         ),
         Text(desc, style: const TextStyle(fontSize: 10, color: Colors.grey)),
@@ -284,7 +284,7 @@ class _LandingPageState extends State<LandingPage> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: isDark ? const Color(0xFF7DA0CA) : const Color(0xFF021024),
+                    color: theme.colorScheme.primary,
                   ),
                 ),
               ],
@@ -303,7 +303,7 @@ class _LandingPageState extends State<LandingPage> {
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: theme.dividerColor.withOpacity(0.08)),
+        border: Border.all(color: theme.dividerColor.withOpacity(0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -319,7 +319,7 @@ class _LandingPageState extends State<LandingPage> {
             children: [
               CircleAvatar(
                 radius: 14,
-                backgroundColor: const Color(0xFF7DA0CA).withOpacity(0.3),
+                backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
                 child: Text(t['name']![0], style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(width: 8),

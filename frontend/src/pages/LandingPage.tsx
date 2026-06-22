@@ -77,7 +77,7 @@ export default function LandingPage() {
             <div className="h-10 w-10 rounded-xl gradient-primary-bg flex items-center justify-center text-white font-extrabold shadow-md">
               L
             </div>
-            <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-blue-600 to-green-500 bg-clip-text text-transparent" style={{ color: 'var(--primary-color)' }}>
+            <span className="font-extrabold text-xl tracking-tight text-gradient-primary">
               LaundryIndia
             </span>
           </div>
@@ -172,7 +172,7 @@ export default function LandingPage() {
             
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-none" style={{ fontFamily: 'Outfit' }}>
               Fresh Clothes,<br />
-              <span className="bg-gradient-to-r from-blue-600 to-green-500 bg-clip-text text-transparent">Doorstep Pickup</span><br />
+              <span className="text-gradient-primary">Doorstep Pickup</span><br />
               In Just 24 Hours.
             </h1>
             

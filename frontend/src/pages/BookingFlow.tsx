@@ -35,7 +35,7 @@ const loadRazorpayScript = () => {
   });
 };
 
-export default function BookingFlow() {
+export default function BookingFlow({ inlined = false, onClose }: { inlined?: boolean; onClose?: () => void }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   
@@ -285,19 +285,21 @@ export default function BookingFlow() {
   };
 
   return (
-    <div className="min-h-screen pb-16" style={{ backgroundColor: 'var(--bg-primary)' }}>
+    <div className={inlined ? "pb-24 pt-4" : "min-h-screen pb-16"} style={{ backgroundColor: 'var(--bg-primary)' }}>
       {/* Mini navbar */}
-      <div className="glass-panel sticky top-0 z-40 rounded-none border-b bg-white" style={{ borderBottom: '1px solid var(--border-color)' }}>
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/dashboard')}>
-            <ChevronLeft size={20} className="text-slate-700" />
-            <span className="font-bold text-base">Exit Booking</span>
+      {!inlined && (
+        <div className="glass-panel sticky top-0 z-40 rounded-none border-b bg-white" style={{ borderBottom: '1px solid var(--border-color)' }}>
+          <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div className="flex items-center space-x-2 cursor-pointer" onClick={() => { if (onClose) { onClose(); } else { navigate('/dashboard'); } }}>
+              <ChevronLeft size={20} className="text-slate-700" />
+              <span className="font-bold text-base">Exit Booking</span>
+            </div>
+            <span className="font-semibold text-sm">Step {currentStep + 1} of 4</span>
           </div>
-          <span className="font-semibold text-sm">Step {currentStep + 1} of 4</span>
         </div>
-      </div>
+      )}
 
-      <div className="max-w-4xl mx-auto px-4 mt-8 space-y-6">
+      <div className={inlined ? "max-w-4xl mx-auto px-4 space-y-6" : "max-w-4xl mx-auto px-4 mt-8 space-y-6"}>
         <Steps current={currentStep} className="hidden sm:flex">
           <Step title="Add Items" icon={<Shirt size={18} />} />
           <Step title="Address" icon={<MapPin size={18} />} />

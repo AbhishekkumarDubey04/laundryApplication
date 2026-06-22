@@ -75,22 +75,26 @@ class _AdminPricingPageState extends State<AdminPricingPage> {
 
     try {
       await ApiService().addPricingRate(payload);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rates configuration updated')));
       Navigator.pop(context);
       _fetchPricing();
     } catch (_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to configure rate')));
     } finally {
-      setState(() => _isSaving = false);
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
   Future<void> _handleDeletePricing(int id) async {
     try {
       await ApiService().deletePricingRate(id);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pricing rate removed')));
       _fetchPricing();
     } catch (_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to remove rate')));
     }
   }
@@ -141,7 +145,7 @@ class _AdminPricingPageState extends State<AdminPricingPage> {
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
             ElevatedButton(
               onPressed: _isSaving ? null : _handleSavePricing,
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF021024), foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Colors.white),
               child: const Text('Save Config'),
             )
           ],
