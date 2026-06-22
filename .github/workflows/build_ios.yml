@@ -61,22 +61,7 @@ jobs:
         run: flutter analyze --no-fatal-infos
         continue-on-error: false
 
-      # ── 6. Cache CocoaPods (speeds up pod install from ~4 min to ~30 sec) ─────
-      - name: Cache CocoaPods
-        uses: actions/cache@v4
-        with:
-          path: ios version/ios/Pods
-          key: pods-${{ runner.os }}-${{ hashFiles('ios version/ios/Podfile.lock') }}
-          restore-keys: |
-            pods-${{ runner.os }}-
-
-      # ── 7. Install CocoaPods dependencies ─────────────────────────────────────
-      - name: Install CocoaPods
-        working-directory: './ios version/ios'
-        run: |
-          pod install --repo-update
-
-      # ── 8. Build the Flutter iOS app (no code signing) ────────────────────────
+      # ── 6. Build the Flutter iOS app (no code signing) ────────────────────────
       - name: Build Flutter iOS release
         run: |
           flutter build ios --release --no-codesign \
