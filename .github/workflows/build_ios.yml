@@ -31,19 +31,18 @@ jobs:
           cd mobile
           flutter pub get
 
-      # To build a fully signed .ipa for App Store or TestFlight, code signing is required.
-      # Since code signing certificates and provisioning profiles are private,
-      # this workflow builds an unsigned iOS bundle (.app) by default.
-      # To add code signing, see instructions at: https://docs.flutter.dev/deployment/cd
-      - name: Build iOS App (Unsigned)
+      # Building for physical iOS devices requires a paid Apple Developer Account/Team.
+      # To check compilation and allow testing on iOS Simulators without credentials,
+      # we compile for the simulator target instead of the physical device target.
+      - name: Build iOS App (Simulator)
         run: |
           cd mobile
-          flutter build ios --no-codesign --release
+          flutter build ios --simulator
 
       # Compress Runner.app into a zip file so it can be uploaded as an artifact
       - name: Compress Runner.app
         run: |
-          cd mobile/build/ios/iphoneos
+          cd mobile/build/ios/iphonesimulator
           zip -r Runner.app.zip Runner.app
 
       # Upload the zip file as a download link in GitHub Actions
@@ -51,4 +50,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ios-runner-app
-          path: mobile/build/ios/iphoneos/Runner.app.zip
+          path: mobile/build/ios/iphonesimulator/Runner.app.zip
