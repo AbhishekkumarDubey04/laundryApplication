@@ -38,15 +38,17 @@ jobs:
           cd mobile
           flutter build ios --no-codesign --release
 
-      # Compress Runner.app into a zip file so it can be uploaded as an artifact
-      - name: Compress Runner.app
+      # Package the app into a standard iOS IPA format (Payload/Runner.app zipped to Runner.ipa)
+      - name: Package IPA
         run: |
           cd mobile/build/ios/iphoneos
-          zip -r Runner.app.zip Runner.app
+          mkdir Payload
+          cp -r Runner.app Payload/
+          zip -r Runner.ipa Payload
 
-      # Upload the zip file as a download link in GitHub Actions
-      - name: Upload iOS App Artifact
+      # Upload the IPA file as a download link in GitHub Actions
+      - name: Upload iOS IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ios-runner-app
-          path: mobile/build/ios/iphoneos/Runner.app.zip
+          name: ios-runner-ipa
+          path: mobile/build/ios/iphoneos/Runner.ipa
