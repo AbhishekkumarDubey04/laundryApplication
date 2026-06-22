@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+        method options:
+          "development"   → install on registered devices (requires Dev cert)
+          "ad-hoc"        → install on any registered device (requires Dist cert)
+          "app-store"     → submit to App Store / TestFlight (requires Dist cert)
+
+        For unsigned/free builds via GitHub Actions (no Apple account),
+        we use "development" with signingStyle "automatic".
+        The runner will self-sign with a local certificate.
+    -->
+    <key>method</key>
+    <string>development</string>
+
+    <key>signingStyle</key>
+    <string>automatic</string>
+
+    <key>stripSwiftSymbols</key>
+    <true/>
+
+    <key>compileBitcode</key>
+    <false/>
+
+    <key>thinning</key>
+    <string>&lt;none&gt;</string>
+</dict>
+</plist>

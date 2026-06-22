@@ -3,8 +3,6 @@ name: Build iOS IPA
 on:
   push:
     branches: [ main ]
-    paths:
-      - 'ios version/**'
   workflow_dispatch:   # Also allows manual "Run workflow" button in GitHub UI
 
 # Cancel any in-progress build if a new push happens
@@ -17,11 +15,6 @@ jobs:
     name: Flutter iOS Build
     runs-on: macos-latest   # GitHub free macOS runner (Apple Silicon M1)
     timeout-minutes: 45
-    
-    # We specify the working directory because the flutter app is in 'ios version' subfolder
-    defaults:
-      run:
-        working-directory: './ios version'
 
     steps:
       # ── 1. Checkout ───────────────────────────────────────────────────────────
@@ -47,8 +40,8 @@ jobs:
         with:
           path: |
             ~/.pub-cache
-            ios version/.dart_tool
-          key: pub-${{ runner.os }}-${{ hashFiles('ios version/pubspec.yaml') }}
+            .dart_tool
+          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.yaml') }}
           restore-keys: |
             pub-${{ runner.os }}-
 
@@ -65,18 +58,19 @@ jobs:
       - name: Cache CocoaPods
         uses: actions/cache@v4
         with:
-          path: ios version/ios/Pods
-          key: pods-${{ runner.os }}-${{ hashFiles('ios version/ios/Podfile.lock') }}
+          path: ios/Pods
+          key: pods-${{ runner.os }}-${{ hashFiles('ios/Podfile.lock') }}
           restore-keys: |
             pods-${{ runner.os }}-
 
       # ── 7. Install CocoaPods dependencies ─────────────────────────────────────
       - name: Install CocoaPods
-        working-directory: './ios version/ios'
+        working-directory: ios
         run: |
           pod install --repo-update
 
       # ── 8. Build the Flutter iOS app (no code signing) ────────────────────────
+      #    This compiles all Dart code and Flutter framework into an iOS .app
       - name: Build Flutter iOS release
         run: |
           flutter build ios --release --no-codesign \
@@ -84,6 +78,8 @@ jobs:
             --build-number=${{ github.run_number }}
 
       # ── 9. Package .app → .ipa using xcodebuild ───────────────────────────────
+      #    A bare .app cannot be installed — it must be archived into an IPA.
+      #    We create the archive structure manually since we have no signing cert.
       - name: Package .app into unsigned IPA
         run: |
           # Create the Payload folder structure that IPA format requires
@@ -102,7 +98,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: LaundryIndia-iOS-${{ github.run_number }}
-          path: ios version/build/ios/ipa/LaundryIndia.ipa
+          path: build/ios/ipa/LaundryIndia.ipa
           if-no-files-found: error      # Fail loudly if IPA wasn't produced
           retention-days: 14            # Keep for 2 weeks
 
@@ -112,7 +108,7 @@ jobs:
         if: success()
         with:
           name: LaundryIndia-dSYM-${{ github.run_number }}
-          path: ios version/build/ios/archive/Runner.xcarchive/dSYMs/
+          path: build/ios/archive/Runner.xcarchive/dSYMs/
           if-no-files-found: warn
           retention-days: 14
 
